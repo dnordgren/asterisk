@@ -9,8 +9,14 @@ struct AsteriskApp: App {
             LibraryRootView()
                 .environmentObject(library)
                 .task {
-                    FixtureSeeder.seedBundledFixturesIntoDocuments()
-                    await library.restorePersistedFiles()
+                    if FixtureSeeder.shouldResetFixturesOnLaunch() {
+                        FixtureSeeder.resetSeededFixturesInDocuments()
+                        let fixtureURLs = FixtureSeeder.seedBundledFixturesIntoDocuments()
+                        await library.resetAndImportFixtureFiles(at: fixtureURLs)
+                    } else {
+                        FixtureSeeder.seedBundledFixturesIntoDocuments()
+                        await library.restorePersistedFiles()
+                    }
                 }
         }
     }

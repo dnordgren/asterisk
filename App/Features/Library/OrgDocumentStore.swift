@@ -26,55 +26,66 @@ final class OrgDocumentStore: ObservableObject {
     }
 
     @Published private(set) var documents: [ImportedDocument] = []
-    @Published var selectedSection: SectionSelection?
-    @Published var selectedEntry: EntrySelection?
 
     private let parser = OrgParser()
     private let defaultsKey = "Asterisk.StoredBookmarks"
 
-    var currentSection: OrgSection? {
-        guard let selectedSection else { return nil }
-        return documents
-            .first(where: { $0.id == selectedSection.documentID })?
-            .document
-            .sections
-            .first(where: { $0.id == selectedSection.sectionID })
+    func documentAndSection(for selection: SectionSelection?) -> (ImportedDocument, OrgSection)? {
+        guard let selection,
+              let document = documents.first(where: { $0.id == selection.documentID }),
+              let section = document.document.sections.first(where: { $0.id == selection.sectionID }) else {
+            return nil
+        }
+
+        return (document, section)
     }
 
-    var currentEntry: OrgEntry? {
-        guard let selectedEntry else { return nil }
+    func entry(for selection: EntrySelection?) -> OrgEntry? {
+        guard let selection else { return nil }
+
         return documents
-            .first(where: { $0.id == selectedEntry.documentID })?
+            .first(where: { $0.id == selection.documentID })?
             .document
-            .sections
-            .first(where: { $0.id == selectedEntry.sectionID })?
-            .entries
-            .first(where: { $0.id == selectedEntry.entryID })
+            .sections.first(where: { $0.id == selection.sectionID })?
+            .entries.first(where: { $0.id == selection.entryID })
+    }
+
+    func contains(sectionSelection: SectionSelection?) -> Bool {
+        documentAndSection(for: sectionSelection) != nil
+    }
+
+    func contains(entrySelection: EntrySelection?) -> Bool {
+        entry(for: entrySelection) != nil
+    }
+
+    func firstAvailableSectionSelection() -> SectionSelection? {
+        guard let firstDocument = documents.first,
+              let firstSection = firstDocument.document.sections.first else {
+            return nil
+        }
+
+        return SectionSelection(documentID: firstDocument.id, sectionID: firstSection.id)
+    }
+
+    func firstEntrySelection(for selection: SectionSelection?) -> EntrySelection? {
+        guard let selection,
+              let entry = documentAndSection(for: selection)?.1.entries.first else {
+            return nil
+        }
+
+        return EntrySelection(
+            documentID: selection.documentID,
+            sectionID: selection.sectionID,
+            entryID: entry.id
+        )
     }
 
     func importFiles(at urls: [URL]) async {
-        var imported: [ImportedDocument] = []
-
-        for url in urls {
-            do {
-                if let document = try loadDocument(from: url) {
-                    imported.append(document)
-                }
-            } catch {
-                continue
-            }
-        }
-
+        let imported = importDocuments(at: urls)
         guard imported.isEmpty == false else { return }
 
         merge(imported)
         persistBookmarks()
-
-        if selectedSection == nil,
-           let firstDocument = documents.first,
-           let firstSection = firstDocument.document.sections.first {
-            select(sectionID: firstSection.id, in: firstDocument.id)
-        }
     }
 
     func restorePersistedFiles() async {
@@ -107,35 +118,17 @@ final class OrgDocumentStore: ObservableObject {
         }
 
         merge(imported)
-
-        if selectedSection == nil,
-           let firstDocument = documents.first,
-           let firstSection = firstDocument.document.sections.first {
-            select(sectionID: firstSection.id, in: firstDocument.id)
-        }
     }
 
-    func select(sectionID: UUID, in documentID: UUID) {
-        selectedSection = SectionSelection(documentID: documentID, sectionID: sectionID)
-        selectedEntry = nil
+    func resetAndImportFixtureFiles(at urls: [URL]) async {
+        documents = []
+        UserDefaults.standard.removeObject(forKey: defaultsKey)
 
-        if let section = documents.first(where: { $0.id == documentID })?
-            .document.sections.first(where: { $0.id == sectionID }),
-           let entry = section.entries.first {
-            selectedEntry = EntrySelection(
-                documentID: documentID,
-                sectionID: sectionID,
-                entryID: entry.id
-            )
-        }
-    }
+        let imported = importDocuments(at: urls)
+        guard imported.isEmpty == false else { return }
 
-    func select(entryID: UUID, in sectionID: UUID, documentID: UUID) {
-        selectedEntry = EntrySelection(
-            documentID: documentID,
-            sectionID: sectionID,
-            entryID: entryID
-        )
+        merge(imported)
+        persistBookmarks()
     }
 
     private func merge(_ imported: [ImportedDocument]) {
@@ -150,6 +143,22 @@ final class OrgDocumentStore: ObservableObject {
         }
 
         documents = merged.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+    }
+
+    private func importDocuments(at urls: [URL]) -> [ImportedDocument] {
+        var imported: [ImportedDocument] = []
+
+        for url in urls {
+            do {
+                if let document = try loadDocument(from: url) {
+                    imported.append(document)
+                }
+            } catch {
+                continue
+            }
+        }
+
+        return imported
     }
 
     private func loadDocument(from url: URL, bookmarkData: Data? = nil) throws -> ImportedDocument? {

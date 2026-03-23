@@ -163,3 +163,19 @@ public struct OrgListItem: Equatable, Sendable {
         self.text = text
     }
 }
+
+public enum FixtureFileSupport {
+    public static let supportedExtensions: Set<String> = ["org", "txt"]
+
+    public static func isSupportedFixtureURL(_ url: URL) -> Bool {
+        supportedExtensions.contains(url.pathExtension.lowercased())
+    }
+
+    public static func supportedFixtureURLs(in urls: [URL]) -> [URL] {
+        urls
+            .filter(isSupportedFixtureURL)
+            .sorted {
+                $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending
+            }
+    }
+}

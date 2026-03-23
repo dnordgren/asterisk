@@ -72,7 +72,15 @@ swift run asterisk-cli Examples/Sample.org
 
 ### Local Fixtures
 
-For Simulator testing, use the gitignored [`LocalFixtures`](./LocalFixtures) folder in the repo. Any `.org` or `.txt` files placed there are bundled into the app at build time and copied into the app's Documents directory on launch, which makes them show up in Files.app under the `asterisk` container.
+For deterministic iOS Simulator testing, use the gitignored [`LocalFixtures`](./LocalFixtures) folder in the repo. Any `.org` or `.txt` files placed there are bundled into the app at build time.
+
+To force a clean simulator fixture reset:
+
+* Add or update files in `LocalFixtures/`
+* Rebuild the app
+* Run the app in the iOS Simulator with the launch argument `-reset-fixtures`
+
+In that mode, the app clears previously seeded simulator fixture files, resets stored bookmarks, recopies the bundled fixtures into the app's Documents directory, and imports them automatically so they appear in the sidebar immediately. The copied files still show up in Files.app under the `asterisk` container.
 
 See [docs/LocalFixtures.md](./docs/LocalFixtures.md) for the exact workflow and reset behavior.
 

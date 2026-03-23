@@ -1,4 +1,5 @@
 import AsteriskCore
+import Foundation
 import Testing
 
 @Test
@@ -88,4 +89,26 @@ func createsFallbackContainersForLooseNestedHeadings() {
     #expect(document.sections[0].entries.count == 1)
     #expect(document.sections[0].entries[0].headline.title == "Loose task")
     #expect(document.sections[0].entries[0].artifacts.contains(.paragraph("Body text")))
+}
+
+@Test
+func fixtureSupportFiltersSupportedExtensions() {
+    let urls = [
+        URL(fileURLWithPath: "/tmp/Notes.txt"),
+        URL(fileURLWithPath: "/tmp/Tasks.org"),
+        URL(fileURLWithPath: "/tmp/Ignore.md"),
+        URL(fileURLWithPath: "/tmp/Archive.ORG"),
+    ]
+
+    let filtered = FixtureFileSupport.supportedFixtureURLs(in: urls)
+
+    #expect(filtered.map(\.lastPathComponent) == ["Archive.ORG", "Notes.txt", "Tasks.org"])
+}
+
+@Test
+func fixtureSupportRejectsUnsupportedFixtureURL() {
+    #expect(FixtureFileSupport.isSupportedFixtureURL(URL(fileURLWithPath: "/tmp/fixture.txt")))
+    #expect(FixtureFileSupport.isSupportedFixtureURL(URL(fileURLWithPath: "/tmp/fixture.org")))
+    #expect(FixtureFileSupport.isSupportedFixtureURL(URL(fileURLWithPath: "/tmp/FIXTURE.ORG")))
+    #expect(FixtureFileSupport.isSupportedFixtureURL(URL(fileURLWithPath: "/tmp/fixture.md")) == false)
 }

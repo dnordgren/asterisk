@@ -18,10 +18,9 @@ struct OrgEntryDetailView: View {
                         HStack(spacing: 12) {
                             if let keyword = entry.headline.keyword {
                                 Text(keyword)
-                                    .font(.caption.weight(.bold))
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 4)
-                                    .background(.quaternary, in: Capsule())
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                    .textCase(.uppercase)
                             }
 
                             if entry.headline.tags.isEmpty == false {
@@ -46,6 +45,8 @@ struct OrgEntryDetailView: View {
 
                         ForEach(entry.children) { child in
                             VStack(alignment: .leading, spacing: 12) {
+                                Divider()
+
                                 Text(child.headline.title)
                                     .font(.headline)
 
@@ -53,9 +54,6 @@ struct OrgEntryDetailView: View {
                                     OrgArtifactView(artifact: item.element)
                                 }
                             }
-                            .padding(16)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(.quaternary, in: RoundedRectangle(cornerRadius: 16))
                         }
                     }
                 }
